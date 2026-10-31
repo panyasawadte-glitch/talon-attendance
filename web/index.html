@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ลงเวลาพนักงาน</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&display=swap">
+<style>
+:root{--bg:#eef2f3;--card:#fff;--tx:#14232b;--mut:#60727b;--ac:#0f5c6e;--on:#fff;--bd:#d6dee1;--bad:#b3261e;--warn:#8a5a00;--ok:#1b6b3a}
+@media(prefers-color-scheme:dark){:root{--bg:#10191d;--card:#18252b;--tx:#e8eff1;--mut:#93a6ae;--ac:#5cc0d6;--on:#06222a;--bd:#2c3d44;--bad:#f2867f;--warn:#e3b341;--ok:#6fd195}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 "Noto Sans Thai",system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:8px 0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px;margin-bottom:12px}
+label{display:block;font-size:14px;color:var(--mut);margin:10px 0 4px}
+input,select{width:100%;font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px}
+input[type=checkbox]{width:auto}
+button{font:inherit;font-weight:600;background:var(--ac);color:var(--on);border:0;border-radius:8px;padding:12px 16px;cursor:pointer}
+button.ghost{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.two button{padding:16px;font-size:18px}
+#msg{margin-top:12px;font-weight:600}
+.bad{color:var(--bad)}.ok{color:var(--ok)}
+#cam{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;z-index:9}
+#cam[hidden]{display:none}
+#vid{flex:1;min-height:0;width:100%;object-fit:cover;transform:scaleX(-1)}
+#gest{background:#fff;color:#000;padding:14px;text-align:center;font-size:20px;font-weight:600}
+#gest small{display:block;font-size:14px;font-weight:400}
+#cb{display:flex;gap:10px;padding:12px;background:#000}#cb button{flex:1}
+nav{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+nav button{padding:8px 12px;font-size:14px}
+.rc{display:flex;gap:12px;border-left:4px solid var(--bd)}
+.rc.flagged{border-color:var(--warn)}.rc.rejected{border-color:var(--bad)}.rc.ok,.rc.approved{border-color:var(--ok)}
+.rc img{width:96px;height:128px;object-fit:cover;border-radius:6px;flex:none}
+.fl{display:inline-block;background:var(--bg);border:1px solid var(--warn);color:var(--warn);border-radius:6px;padding:0 6px;margin:2px 4px 2px 0;font-size:13px}
+.bt{display:flex;gap:8px;margin-top:8px}.bt button{padding:6px 12px;font-size:14px}
+.rw{display:grid;gap:6px;border-bottom:1px solid var(--bd);padding:10px 0}
+.rw .g{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:6px;border-bottom:1px solid var(--bd)}
+.sc{overflow-x:auto}small{color:var(--mut)}
+a{color:var(--ac)}
+</style>
+</head>
+<body>
+<main>
+<div id="emp-view">
+  <h1>ลงเวลาทำงาน</h1>
+  <div class="card">
+    <b>ขั้นแรก: เปิดสิทธิ์กล้องและตำแหน่ง</b>
+    <p><button id="ask">อนุญาตกล้องและตำแหน่ง</button></p>
+    <div id="pmsg" style="white-space:pre-line;font-weight:600"></div>
+  </div>
+  <div class="card">
+    <label for="emp">ชื่อของคุณ</label><select id="emp"></select>
+    <label for="pin">PIN</label><input id="pin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">
+    <div class="two"><button id="bin">เข้างาน</button><button id="bout" class="ghost">ออกงาน</button></div>
+    <div id="msg" role="status"></div>
+  </div>
+  <small>ต้องถ่ายเซลฟี่ให้เห็นหน้า โลโก้ TALON / Rebecca Lim's และทำท่าตามที่ระบบสั่ง</small>
+  <p><a href="#admin">สำหรับผู้ดูแล</a></p>
+</div>
+
+<div id="adm-view" hidden>
+  <h1>ผู้ดูแลระบบ</h1>
+  <div id="login" class="card">
+    <label for="pw">รหัสผู้ดูแล</label><input id="pw" type="password">
+    <div class="two"><button id="lg">เข้าสู่ระบบ</button><button class="ghost" id="back">กลับ</button></div>
+    <div id="lmsg" class="bad"></div>
+  </div>
+  <div id="panel" hidden>
+    <nav>
+      <button data-t="rec">ตรวจสอบ</button><button data-t="rep" class="ghost">รายงาน</button>
+      <button data-t="emp" class="ghost">พนักงาน</button><button data-t="br" class="ghost">สาขา</button>
+      <button data-t="man" class="ghost">เพิ่มเวลา</button>
+    </nav>
+    <div id="t-rec" class="tab card">
+      <div class="g two"><div><label>ตั้งแต่</label><input type="date" id="f1"></div><div><label>ถึง</label><input type="date" id="f2"></div></div>
+      <label><input type="checkbox" id="of" checked> แสดงเฉพาะรายการติดธง</label>
+      <p><button id="ld">แสดงรายการ</button></p><div id="list"></div>
+    </div>
+    <div id="t-rep" class="tab card" hidden>
+      <div class="two"><div><label>ตั้งแต่</label><input type="date" id="r1"></div><div><label>ถึง</label><input type="date" id="r2"></div></div>
+      <p><button id="lr">ออกรายงาน</button> <button id="csv" class="ghost">ดาวน์โหลด Excel (CSV)</button></p>
+      <div id="sum"></div><div class="sc" id="rep"></div>
+    </div>
+    <div id="t-emp" class="tab card" hidden><div id="el"></div></div>
+    <div id="t-br" class="tab card" hidden><div id="bl"></div></div>
+    <div id="t-man" class="tab card" hidden>
+      <label>พนักงาน</label><select id="me"></select>
+      <label>สาขา</label><select id="mb"></select>
+      <label>ประเภท</label><select id="ma"><option value="in">เข้างาน</option><option value="out">ออกงาน</option></select>
+      <label>วันและเวลา</label><input type="datetime-local" id="mt">
+      <label>เหตุผล</label><input id="mn" placeholder="เช่น ลืมเช็คอิน">
+      <p><button id="ms">บันทึกเวลา</button></p><div id="mm"></div>
+    </div>
+  </div>
+</div>
+</main>
+
+<div id="cam" hidden>
+  <video id="vid" autoplay playsinline muted></video>
+  <div id="gest"></div>
+  <div id="cb"><button id="snap">ถ่ายและส่ง</button><button id="cx" class="ghost">ยกเลิก</button></div>
+</div>
+
+<script>
+const API="https://YOUR_PROJECT.supabase.co/functions/v1/api";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const call=async o=>{try{const r=await fetch(API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(o)});return await r.json()}catch(e){return{ok:false,message:"เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่",error:"network"}}};
+const today=()=>new Date().toLocaleDateString("en-CA",{timeZone:"Asia/Bangkok"});
+const fmt=d=>new Date(d).toLocaleString("th-TH",{timeZone:"Asia/Bangkok",dateStyle:"short",timeStyle:"short"});
+let did;try{did=localStorage.getItem("did");if(!did){did=crypto.randomUUID();localStorage.setItem("did",did)}}catch(e){did="x"+Math.random()}
+
+/* ===== พนักงาน ===== */
+const msg=(t,c)=>{$("#msg").textContent=t;$("#msg").className=c||""};
+let act,chal,stream,pos;
+async function loadInfo(){
+  const r=await call({action:"info"});
+  if(!r.employees){msg("โหลดรายชื่อไม่ได้ ลองรีเฟรชหน้านี้","bad");return}
+  $("#emp").innerHTML='<option value="">เลือกชื่อ</option>'+r.employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("");
+  try{$("#emp").value=localStorage.getItem("emp")||""}catch(e){}
+}
+async function start(a){
+  act=a;msg("");
+  const id=$("#emp").value,pin=$("#pin").value;
+  if(!id||!pin)return msg("เลือกชื่อและใส่ PIN ก่อน","bad");
+  if(!navigator.geolocation||!navigator.mediaDevices)return msg("เบราว์เซอร์นี้ไม่รองรับ ให้เปิดลิงก์ด้วย Chrome หรือ Safari","bad");
+  try{localStorage.setItem("emp",id)}catch(e){}
+  try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:720}},audio:false})}
+  catch(e){return msg(camMsg(e),"bad")}
+  chal=await call({action:"challenge"});
+  if(!chal.token){stop();return msg("ขอรหัสท่าทางไม่ได้ ลองใหม่","bad")}
+  $("#cam").hidden=false;$("#vid").srcObject=stream;
+  try{await $("#vid").play()}catch(e){}
+  $("#gest").innerHTML=`ทำท่า: ${esc(chal.prompt)}<small>ให้เห็นหน้าและโลโก้ร้านในภาพ</small>`;
+  $("#cam").hidden=false;pos=null;
+  navigator.geolocation.watchPosition(p=>pos=p,()=>{},{enableHighAccuracy:true,maximumAge:0,timeout:20000});
+  window._w=true;
+}
+function stop(){
+  if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
+  $("#cam").hidden=true;
+}
+async function snap(){
+  const v=$("#vid");
+  if(!v.videoWidth){$("#gest").innerHTML="ภาพกล้องยังไม่ขึ้น กด ยกเลิก แล้วเริ่มใหม่";return}
+  if(!pos){$("#gest").innerHTML="ยังไม่พบ GPS รอสักครู่แล้วกดอีกครั้ง";return}
+  $("#snap").disabled=true;
+  const w=480,h=Math.round(w*v.videoHeight/v.videoWidth),c=document.createElement("canvas");
+  c.width=w;c.height=h;c.getContext("2d").drawImage(v,0,0,w,h);
+  const s=document.createElement("canvas");s.width=9;s.height=8;
+  const x=s.getContext("2d");x.drawImage(c,0,0,9,8);const d=x.getImageData(0,0,9,8).data;
+  const g=i=>d[i]*.3+d[i+1]*.59+d[i+2]*.11;
+  let bits="";for(let y=0;y<8;y++)for(let i=0;i<8;i++){const a=(y*9+i)*4;bits+=g(a)>g(a+4)?1:0}
+  let dh="";for(let i=0;i<64;i+=4)dh+=parseInt(bits.slice(i,i+4),2).toString(16);
+  const photo=c.toDataURL("image/jpeg",.7);
+  const r=await call({action:"checkin",employee_id:+$("#emp").value,pin:$("#pin").value,act,challenge:chal.token,
+    lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,photo,dhash:dh,device_id:did});
+  stop();$("#snap").disabled=false;$("#pin").value="";
+  msg(r.message||r.error||"เกิดข้อผิดพลาด",r.ok?"ok":"bad");
+}
+const inApp=/Line\/|FBAN|FBAV|Instagram|MicroMessenger/i.test(navigator.userAgent);
+function camMsg(e){
+  if(!window.isSecureContext)return "ต้องเปิดผ่านลิงก์ที่ขึ้นต้นด้วย https เท่านั้น";
+  if(inApp)return "คุณเปิดลิงก์ในแอปแชท (เช่น LINE) ให้กดเมนู ⋯ แล้วเลือก เปิดในเบราว์เซอร์ (Chrome หรือ Safari)";
+  const n=e&&e.name;
+  if(n=="NotAllowedError"||n=="SecurityError")return "กล้องถูกบล็อก ให้กดไอคอนข้างช่องที่อยู่เว็บ → สิทธิ์ → กล้อง → อนุญาต แล้วรีเฟรชหน้านี้ (iPhone: ตั้งค่า → Safari → กล้อง → อนุญาต)";
+  if(n=="NotFoundError")return "ไม่พบกล้องหน้าในเครื่องนี้";
+  if(n=="NotReadableError")return "กล้องถูกใช้โดยแอปอื่น ปิดแอปอื่นแล้วลองใหม่";
+  return "เปิดกล้องไม่ได้ ("+(n||"ไม่ทราบสาเหตุ")+")";
+}
+$("#ask").onclick=async()=>{
+  const m=$("#pmsg");m.className="";m.textContent="กำลังขอสิทธิ์...";
+  let cam=false,ce;
+  try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});s.getTracks().forEach(t=>t.stop());cam=true}catch(e){ce=e}
+  const gps=await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(()=>r(true),()=>r(false),{timeout:15000}):r(false));
+  m.className=cam&&gps?"ok":"bad";
+  m.textContent=(cam?"กล้อง: อนุญาตแล้ว":"กล้อง: "+camMsg(ce))+"\n"+(gps?"ตำแหน่ง: อนุญาตแล้ว":"ตำแหน่ง: ยังไม่ได้รับอนุญาต ให้เปิดตำแหน่ง (Location) ของมือถือ และอนุญาตให้เบราว์เซอร์ใช้ตำแหน่ง");
+};
+$("#bin").onclick=()=>start("in");$("#bout").onclick=()=>start("out");
+$("#snap").onclick=snap;$("#cx").onclick=stop;
+
+/* ===== ผู้ดูแล ===== */
+let PW="",L={employees:[],branches:[]};
+const A=(a,o={})=>call({action:"admin_"+a,password:PW,...o});
+const FL={outside_branch:"อยู่นอกสาขา",gps_low_accuracy:"GPS ไม่แม่น",device_changed:"เปลี่ยนเครื่อง",missed_checkout:"ไม่ได้ออกงานครั้งก่อน",out_without_in:"ออกงานโดยไม่มีเข้างาน",impossible_travel:"เดินทางเร็วผิดปกติ",photo_exact_duplicate:"รูปซ้ำเดิม",photo_similar:"รูปคล้ายรูปเก่า",manual:"เพิ่มโดยผู้ดูแล"};
+const ST={ok:"ปกติ",flagged:"รอตรวจ",approved:"อนุมัติแล้ว",rejected:"ปฏิเสธ"};
+function route(){const a=location.hash=="#admin";$("#emp-view").hidden=a;$("#adm-view").hidden=!a}
+addEventListener("hashchange",route);$("#back").onclick=()=>location.hash="";
+$("#lg").onclick=async()=>{
+  PW=$("#pw").value;const r=await A("login");
+  if(!r.ok){$("#lmsg").textContent=r.error||"เข้าสู่ระบบไม่ได้";return}
+  $("#login").hidden=true;$("#panel").hidden=false;$("#pw").value="";
+  $("#f1").value=$("#f2").value=today();
+  $("#r1").value=today().slice(0,8)+"01";$("#r2").value=today();
+  await lists();loadRec();
+};
+document.querySelector("nav").onclick=e=>{
+  const t=e.target.dataset.t;if(!t)return;
+  document.querySelectorAll(".tab").forEach(x=>x.hidden=x.id!="t-"+t);
+  document.querySelectorAll("nav button").forEach(b=>b.className=b.dataset.t==t?"":"ghost");
+};
+async function loadRec(){
+  $("#list").textContent="กำลังโหลด...";
+  const r=await A("records",{from:$("#f1").value,to:$("#f2").value,only_flagged:$("#of").checked});
+  if(!r.ok){$("#list").textContent=r.error;return}
+  $("#list").innerHTML=r.rows.map(x=>`<div class="card rc ${x.status}">${x.photo_url?`<a href="${x.photo_url}" target="_blank"><img src="${x.photo_url}" loading="lazy" alt="รูปเซลฟี่"></a>`:""}<div><b>${esc(x.employees?.name)}</b> ${x.action=="in"?"เข้างาน":"ออกงาน"} ที่ ${esc(x.branches?.name)}<br><small>${fmt(x.server_time)} · ท่า: ${esc(x.prompt)||"-"} · GPS ±${Math.round(x.accuracy_m||0)} ม. · <a target="_blank" href="https://maps.google.com/?q=${x.lat},${x.lng}">แผนที่</a></small><br>${(x.flags||[]).map(f=>`<span class="fl">${FL[f]||f}</span>`).join("")}<small>${ST[x.status]||""} ${esc(x.note)}</small><div class="bt"><button data-id="${x.id}" data-s="approved">อนุมัติ</button><button class="ghost" data-id="${x.id}" data-s="rejected">ปฏิเสธ</button></div></div></div>`).join("")||"ไม่มีรายการในช่วงนี้";
+}
+$("#ld").onclick=loadRec;
+$("#list").onclick=async e=>{
+  const b=e.target.closest("button[data-id]");if(!b)return;
+  const note=b.dataset.s=="rejected"?prompt("เหตุผลที่ปฏิเสธ (ไม่บังคับ)")||"":"";
+  const r=await A("review",{id:b.dataset.id,status:b.dataset.s,note});
+  r.ok?loadRec():alert(r.error);
+};
+let RP=[];
+$("#lr").onclick=async()=>{
+  const r=await A("report",{from:$("#r1").value,to:$("#r2").value});
+  if(!r.ok){$("#rep").textContent=r.error;return}
+  RP=r.rows;const tot={};RP.forEach(x=>tot[x.employee]=(tot[x.employee]||0)+(+x.hours||0));
+  $("#sum").innerHTML="<p><b>ชั่วโมงรวม</b><br>"+(Object.entries(tot).map(([k,v])=>`${esc(k)}: ${v.toFixed(2)} ชม.`).join("<br>")||"ไม่มีข้อมูล")+"</p>";
+  $("#rep").innerHTML="<table><tr><th>ชื่อ</th><th>วันที่</th><th>สาขา</th><th>เข้า</th><th>ออก</th><th>ชม.</th></tr>"+RP.map(x=>`<tr><td>${esc(x.employee)}</td><td>${x.work_date}</td><td>${esc(x.branch)}</td><td>${x.time_in||""}</td><td>${x.time_out||"ยังไม่ออก"}</td><td>${x.hours??""}</td></tr>`).join("")+"</table>";
+};
+$("#csv").onclick=()=>{
+  if(!RP.length)return alert("กดออกรายงานก่อน");
+  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const t="\ufeff"+["ชื่อ,วันที่,สาขา,เวลาเข้า,เวลาออก,ชั่วโมง",...RP.map(x=>[x.employee,x.work_date,x.branch,x.time_in,x.time_out,x.hours].map(q).join(","))].join("\r\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/csv;charset=utf-8"}));
+  a.download=`attendance_${$("#r1").value}_${$("#r2").value}.csv`;a.click();
+};
+async function lists(){
+  const r=await A("lists");if(!r.ok)return;L=r;
+  const row=e=>`<div class="rw" data-id="${e.id||""}"><input class="n" value="${esc(e.name||"")}" placeholder="ชื่อพนักงาน"><div class="g"><select class="t"><option value="regular" ${e.type!="floater"?"selected":""}>ประจำ</option><option value="floater" ${e.type=="floater"?"selected":""}>หน่วยแทน</option></select><input class="p" inputmode="numeric" maxlength="6" placeholder="${e.has_pin?"PIN ใหม่ (ถ้าจะเปลี่ยน)":"ตั้ง PIN 4-6 หลัก"}"></div><label><input type="checkbox" class="a" ${e.active!==false?"checked":""}> ใช้งานอยู่</label><div><button class="se">บันทึก</button></div></div>`;
+  $("#el").innerHTML="<b>เพิ่มพนักงานใหม่</b>"+row({})+"<b>พนักงานทั้งหมด</b>"+L.employees.map(row).join("");
+  const br=b=>`<div class="rw" data-id="${b.id||""}"><input class="n" value="${esc(b.name||"")}" placeholder="ชื่อสาขา"><div class="g"><input class="la" value="${b.lat??""}" placeholder="ละติจูด"><input class="lo" value="${b.lng??""}" placeholder="ลองจิจูด"></div><label>รัศมีเช็คอิน (เมตร)</label><input class="r" inputmode="numeric" value="${b.radius_m||150}"><label><input type="checkbox" class="a" ${b.active!==false?"checked":""}> เปิดใช้งาน</label><div><button class="sb">บันทึก</button></div></div>`;
+  $("#bl").innerHTML="<b>เพิ่มสาขาใหม่</b>"+br({})+"<b>สาขาทั้งหมด</b>"+L.branches.map(br).join("");
+  $("#me").innerHTML=L.employees.filter(e=>e.active).map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("");
+  $("#mb").innerHTML=L.branches.filter(b=>b.active).map(b=>`<option value="${b.id}">${esc(b.name)}</option>`).join("");
+}
+$("#el").onclick=async e=>{
+  const b=e.target.closest(".se");if(!b)return;const w=b.closest(".rw");
+  const r=await A("save_employee",{id:w.dataset.id,name:w.querySelector(".n").value,type:w.querySelector(".t").value,pin:w.querySelector(".p").value,active:w.querySelector(".a").checked});
+  r.ok?lists():alert(r.error);
+};
+$("#bl").onclick=async e=>{
+  const b=e.target.closest(".sb");if(!b)return;const w=b.closest(".rw");
+  const r=await A("save_branch",{id:w.dataset.id,name:w.querySelector(".n").value,lat:w.querySelector(".la").value,lng:w.querySelector(".lo").value,radius_m:w.querySelector(".r").value,active:w.querySelector(".a").checked});
+  r.ok?lists():alert(r.error);
+};
+$("#ms").onclick=async()=>{
+  if(!$("#mt").value)return $("#mm").textContent="เลือกวันและเวลา";
+  const r=await A("manual",{employee_id:$("#me").value,branch_id:$("#mb").value,act:$("#ma").value,time:new Date($("#mt").value).toISOString(),note:$("#mn").value});
+  $("#mm").textContent=r.ok?"บันทึกแล้ว":r.error;
+};
+route();loadInfo();
+</script>
+</body>
+</html>
